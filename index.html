@@ -1,0 +1,1281 @@
+<!DOCTYPE html> 
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Chess</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.2/p5.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.2/addons/p5.dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.2/addons/p5.sound.js"></script>
+
+    <style>
+        .dark-mode {
+            --globalBackground: rgba(0,0,0,0.2);
+            --globalSecondaryBackground: rgba(0,0,0,0.14);
+            --globalTertiaryBackground: rgba(2,1,1,0.18);
+            --globalAccentBackground: hsla(0,0%,80%,0.14);
+            --subtleButtonBackground: hsla(0,0%,80%,0.16);
+            --globalBorder: hsla(0,0%,80%,0.1);
+            --globalGray: hsla(0,0%,80%,0.08);
+            --globalGraySoft: hsla(0,0%,80%,0.08);
+            --globalChartBackground: hsla(0,0%,80%,0.05);
+            --globalColorThemeFull: #fff;
+            --globalColorThemeHigh: hsla(0,0%,80%,0.8);
+            --globalColorThemeMid: hsla(0,0%,80%,0.65);
+            --globalColorThemeLow: hsla(0,0%,80%,0.4);
+            --globalColorThemeLink: #52b1dc;
+            --globalUsernameLink: #52b1dc;
+            --globalColorThemeHighToMid: hsla(0,0%,80%,0.65);
+            --globalColorThemeFullToMid: hsla(0,0%,80%,0.65);
+            --globalColorNeutral80: rgba(0,0,0,0.2);
+            --globalColorNeutral200: rgba(0,0,0,0.4);
+            --globalMoveTray: #272421;
+            --globalTabAccent: hsla(0,0%,80%,0.65);
+        }
+
+        body {
+            background-color: #312e2b;
+            color: #312e2b;
+            font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;
+            font-size: 1.4rem;
+            line-height: 1.43;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+  </head>
+  <body class="dark-mode">
+
+        <!-- Creating text box. -->
+        <div class="mainDisplay">
+
+            <style>
+                ::placeholder {
+                    background: var(--globalGray);
+                    border-radius: 1rem;
+                    padding: 1.6rem;
+                    font-size: 12px;
+                    position: relative;
+                }
+                input, select, textarea {
+                    background: var(--globalGray);
+                    border-radius: 1rem;
+                    padding: 1.6rem;
+                    font-size: 12px;
+                    color: rgb(200, 200, 200);
+                }
+                #chatFont {
+                    background: var(--globalGray);
+                    border-radius: 1rem;
+                    padding: 1rem;
+                    font-size: 12px;
+                    color: rgb(200, 200, 200);
+                }
+                table {
+                    position:absolute;
+                    top:150px;
+                    right:450px;
+                    border-collapse: collapse;
+                    border-spacing: 0;
+                    width: 350px;
+                    border: transparent;
+                }
+                th, td {
+                    text-align: left;
+                    padding: 8px;
+                }
+                #txtFont {
+                    position:relative;
+                    bottom:0px;
+                    color: var(--globalColorThemeFull);
+                    font-family: var(--globalSecondaryFont);
+                    font-size: 12px;
+                    font-weight: 800;
+                    margin-bottom: .8rem;
+                    text-shadow: 0 0.1rem 0 rgb(0 0 0 / 40%);
+                }
+                #text-position {
+                    position: absolute;
+                    bottom: 80px;
+                    right: 450px;
+                    text-align: center;
+                    width: 300px;
+                    height: 25px;
+                    font-size: 24px;
+                    background-color: hsla(0,0%,80%,0.1);
+                    border-radius: 12px;
+                }
+                #msg-button{
+                    position:absolute;
+                    background-color:rgb(127, 80, 166);
+                    bottom: 80px;  
+                    right: 350px;
+                    text-align: center;
+                    width: 100px;
+                    height: 75px;
+                    border-radius: 12px;
+                }
+            </style>
+            <input id="text-position" type="text" name="msg" placeholder="Message">
+            
+            <table id="msgBox">
+
+            </table>
+
+            <!-- Creating chess || -->
+            <!--                VV -->
+
+            <h2 id = "team"></h2>
+            <script src="/socket.io/socket.io.js"></script>
+            <script type="text/javascript">
+            var letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+            function isKnightMove(squareOne, squareTwo){
+                var letterDifference = Math.abs(letters.indexOf(squareOne.substring(0, 1)) - letters.indexOf(squareTwo.substring(0, 1)));
+                var difference = Math.abs(parseInt(squareOne.substring(1, 2)) - parseInt(squareTwo.substring(1, 2)));
+
+                return (letterDifference == 1 && difference == 2) || (letterDifference == 2 && difference == 1);
+            }
+
+            function getAdditives(squareOne, squareTwo){
+                return [letters.indexOf(squareOne.substring(0, 1)) > letters.indexOf(squareTwo.substring(0, 1)) ? -1 : 1, parseInt(squareOne.substring(1, 2)) > parseInt(squareTwo.substring(1, 2)) ? -1 : 1];
+            }
+
+            function add(squareOne, x, y){
+                return letters[letters.indexOf(squareOne.substring(0, 1)) + x % letters.length] + (parseInt(squareOne.substring(1, 2)) + y % 8).toString();
+            }
+
+            function isDiagonal(squareOne, squareTwo){
+                return Math.abs(letters.indexOf(squareOne.substring(0, 1)) - letters.indexOf(squareTwo.substring(0, 1))) === Math.abs(parseInt(squareOne.substring(1, 2)) - parseInt(squareTwo.substring(1, 2)));
+            }
+
+            function isHorizontal(squareOne, squareTwo){
+                return squareOne.substring(0, 1) === squareTwo.substring(0, 1) || squareOne.substring(1, 2) === squareTwo.substring(1, 2);
+            }
+
+            function iterate(squareOne, squareTwo){
+                if(squareOne === squareTwo || (!isHorizontal(squareOne, squareTwo) && !isDiagonal(squareOne, squareTwo))){
+                    return [];
+                }
+
+                var letterOne = squareOne.substring(0, 1);
+                var numberOne = parseInt(squareOne.substring(1, 2));
+                var letterTwo = squareTwo.substring(0, 1);
+                var numberTwo = parseInt(squareTwo.substring(1, 2));
+
+                var squares = [];
+                var currSquare = new String(squareOne);
+
+                var xAdditive = getAdditives(squareOne, squareTwo)[0];
+                var yAdditive = getAdditives(squareOne, squareTwo)[1];
+
+                if(letterOne === letterTwo){
+                    while(currSquare != squareTwo){
+                        currSquare = add(currSquare, 0, yAdditive);
+                        if(currSquare == squareTwo){
+                            break;
+                        }
+                        squares.push(currSquare);
+                    }
+                }
+
+                if(numberOne === numberTwo){
+                    while(currSquare != squareTwo){
+                        currSquare = add(currSquare, xAdditive, 0);
+                        if(currSquare == squareTwo){
+                            break;
+                        }
+                        squares.push(currSquare);
+                    }
+                }
+
+                if(isDiagonal(squareOne, squareTwo)){
+                    while(currSquare != squareTwo){
+                        currSquare = add(currSquare, xAdditive, yAdditive);
+                        if(currSquare == squareTwo){
+                            break;
+                        }
+                        squares.push(currSquare);
+                    }
+                }
+
+                return squares;
+            }
+
+            function equals(one, two){
+                return one === two;
+            }
+
+            function isObject(obj) {
+                var type = typeof obj;
+                return type === 'function' || type === 'object' && !!obj;
+            };
+            function iterationCopy(src) {
+                let target = {};
+                for (let prop in src) {
+                if (src.hasOwnProperty(prop)) {
+                    // if the value is a nested object, recursively copy all it's properties
+                    if (isObject(src[prop])) {
+                    target[prop] = iterationCopy(src[prop]);
+                    } else {
+                    target[prop] = src[prop];
+                    }
+                }
+                }
+                return target;
+            }
+
+            </script>
+            <script type="text/javascript">
+            class Piece{
+                constructor(type, square, position){
+                    this.square = square;
+                    this.name = type;
+                    this.position = position;
+                    this.beingDragged = false;
+                    this.sprite;
+                }
+
+                update(newPos){
+                    this.position = newPos;
+                }
+
+                setName(newName){
+                    this.name = newName;
+                }
+
+                setDragged(val){
+                    this.beingDragged = val;
+                }
+
+                setSquare(squareName){
+                    this.square = squareName;
+                }
+
+                isBeingDragged(){
+                    return this.beingDragged;
+                }
+
+                show(){
+                    if(board.isWhite(this.name)){
+                        fill(0, 0, 255);
+                    }
+                    else{
+                        fill(255, 0, 0);
+                    }
+                    var pieceWidth = 80;
+                    var pieceHeight = 80;
+                    var xSub = 0;
+                    var ySub = 0
+                    if(this.isBeingDragged()){
+                        pieceWidth += 80*0.4;
+                        pieceHeight += 80*0.4;
+                        xSub = 25;
+                        ySub = 25;
+                    }
+                    image(this.sprite, (this.position[0]-80/2)-xSub, (this.position[1]-80/2)-ySub, pieceWidth, pieceHeight);
+
+                }
+
+                getX(){
+                    return this.position[0];
+                }
+
+                getY(){
+                    return this.position[1];
+                }
+
+            }
+
+            </script>
+            <script type="text/javascript">
+            function path(p){
+                return loadImage(p + ".png");
+            }
+
+            function currWhite(curr){
+                return ["P", "R", "N", "B", "K", "Q"].includes(curr);
+            }
+
+            class Pawn extends Piece{
+                constructor(type, square, position){
+                    super(type, square, position);
+                    if(currWhite(type)){
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Chess_plt45.svg/1024px-Chess_plt45.svg.png");
+                    }
+                    else{
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Chess_pdt45.svg/1024px-Chess_pdt45.svg.png");
+                    }
+                }
+            }
+
+            class Rook extends Piece{
+                constructor(type, square, position){
+                    super(type, square, position);
+                    if(currWhite(type)){
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Chess_rlt45.svg/1024px-Chess_rlt45.svg.png");
+                    }
+                    else{
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Chess_rdt45.svg/1024px-Chess_rdt45.svg.png");
+                    }
+                }
+            }
+
+            class Bishop extends Piece{
+                constructor(type, square, position){
+                    super(type, square, position);
+                    if(currWhite(type)){
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Chess_blt45.svg/1024px-Chess_blt45.svg.png");
+                    }
+                    else{
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Chess_bdt45.svg/1024px-Chess_bdt45.svg.png");
+                    }
+                }
+            }
+
+            class Knight extends Piece{
+                constructor(type, square, position){
+                    super(type, square, position);
+                    if(currWhite(type)){
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Chess_nlt45.svg/1024px-Chess_nlt45.svg.png");
+                    }
+                    else{
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Chess_ndt45.svg/1024px-Chess_ndt45.svg.png");
+                    }
+                }
+            }
+
+            class King extends Piece{
+                constructor(type, square, position){
+                    super(type, square, position);
+                    if(currWhite(type)){
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Chess_klt45.svg/1024px-Chess_klt45.svg.png");
+                    }
+                    else{
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Chess_kdt45.svg/1024px-Chess_kdt45.svg.png");
+                    }
+
+                }
+            }
+
+            class Queen extends Piece{
+                constructor(type, square, position){
+                    super(type, square, position);
+                    if(currWhite(type)){
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Chess_qlt45.svg/1024px-Chess_qlt45.svg.png");
+                    }
+                    else{
+                        this.sprite = path("https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Chess_qdt45.svg/1024px-Chess_qdt45.svg.png");
+                    }
+                }
+            }
+
+            </script>
+            <script type="text/javascript">
+                class Board{
+                    constructor(){
+                        // Creating tools
+                        this.lowerCase = ['r', 'b', 'n', 'k', 'q', 'p'];
+                        this.upperCase = ['R', 'B', 'N', 'K', 'Q', 'P'];
+                        this.whiteMove = true;
+                        this.blackMove = false;
+                        this.whiteCastlingRights = true;
+                        this.blackCastlingRights = true;
+                        this.squareNames = []
+
+                        this.blackPerspective = false;
+
+                        // Creating square list
+                        this.squares = [];
+                        this.letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+                        for(var i = 1; i < 9; i++){
+                            for(var index = 0; index < 8; index++){
+                                var letter = this.letters[index];
+                                this.squares.push(new Piece("", (letter + (9-i).toString()), [0, 0]));
+                            }
+                        }
+
+                        for(var i = 1; i < 9; i++){
+                            for(var index = 0; index < 8; index++){
+                                var letter = this.letters[index];
+                                this.squareNames.push(letter + i);
+                            }
+                        }
+
+                        // Board matrix
+                        this.pieces = [
+                            "r", "n", "b", "q", "k", "b", "n", "r",
+                            "p", "p", "p", "p", "p", "p", "p", "p",
+                            ".", ".", ".", ".", ".", ".", ".", ".",
+                            ".", ".", ".", ".", ".", ".", ".", ".",
+                            ".", ".", ".", ".", ".", ".", ".", ".",
+                            ".", ".", ".", ".", ".", ".", ".", ".",
+                            "P", "P", "P", "P", "P", "P", "P", "P",
+                            "R", "N", "B", "Q", "K", "B", "N", "R",
+                        ]
+
+                        for(var index = 0; index < this.pieces.length; index++){
+                            var pieceType = this.pieces[index];
+                            switch(pieceType.toUpperCase()){
+                                case "P":
+                                    this.squares[index] = new Pawn(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "R":
+                                    this.squares[index] = new Rook(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "B":
+                                    this.squares[index] = new Bishop(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "N":
+                                    this.squares[index] = new Knight(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "K":
+                                    this.squares[index] = new King(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "Q":
+                                    this.squares[index] = new Queen(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                            }
+                        }
+
+
+                        // Creating board dictionary
+                        this.matrix = []
+                        for(var index = 0; index < this.squares.length; index++){
+                            this.squares[index].update(this.squareToPosition(this.squares[index].square));
+                            if(this.squares[index].name != ""){
+                                this.matrix.push(this.squares[index]);
+                            }
+                        }
+                    }
+
+                    squareToIndex(square){
+                        for(var index = 0; index < this.matrix.length; index++){
+                            if(this.matrix[index].square == square){
+                                return index;
+                            }
+                        }
+                    }
+
+                    pieceAt(square){
+                        try{
+                            return this.matrix[this.squareToIndex(square)].name;
+                        }
+                        catch(err){
+                            return "";
+                        }
+                    }
+
+                    pieceObjectAt(square){
+                        square = square.toLowerCase();
+                        var pieceFrom;
+                        for(var index = 0; index < this.matrix.length; index ++){
+                            var piece = this.matrix[index];
+                            var squareAt = piece.square.toLowerCase().toString();
+                            if(square === squareAt){
+                                pieceFrom = piece;
+                            }
+                        }
+                        return pieceFrom;
+                    }
+
+                    whiteAt(square){
+                        return this.upperCase.includes(this.matrix[this.squareToIndex(square)].name);
+                    }
+
+                    blackAt(square){
+                        return this.lowerCase.includes(this.matrix[this.squareToIndex(square)].name);
+                    }
+
+                    isWhite(piece){
+                        return this.upperCase.includes(piece);
+                    }
+
+                    isBlack(piece){
+                        return this.lowerCase.includes(piece);
+                    }
+
+                    sameTeam(pieceOne, pieceTwo){
+                        if(pieceOne == "" || pieceTwo == ""){
+                            return false;
+                        }
+                        return (this.isWhite(pieceOne) && this.isWhite(pieceTwo)) || (this.isBlack(pieceOne) && this.isBlack(pieceTwo))
+                    }
+
+                    squareToPosition(currSquare){
+                        var x;
+                        var y = parseInt((currSquare).substring(1, 2))*80;
+                        for(var index = 0; index < this.letters.length; index++){
+                            if(this.letters[index] == (currSquare).substring(0, 1)){
+                                x = index*80;
+                            }
+                        }
+                        return [x, height-(y)]
+                    
+                    }
+
+                    positionToSquare(x, y){
+                        var position = [x, y];
+                        for(var i = 1; i < 9; i++){
+                            for(var index = 0; index < 8; index++){
+                                var letter = this.letters[index];
+                                var name = (letter + (i));
+
+                                var positionAt = this.squareToPosition(name);
+                                if(positionAt[0] == position[0] && positionAt[1] == position[1]){
+                                    return name.substring(0, 1) + (parseInt(name.substring(1, 2))).toString();
+                                }
+                            }
+                        }
+                    }
+
+                    legal_moves(){
+                        var moves = []
+                        for(var indexOne = 0; indexOne < this.matrix.length; indexOne ++){
+                            for(var indexTwo = 0; indexTwo < this.squareNames.length; indexTwo ++){
+                                var squareOne = this.matrix[indexOne].square;
+                                var squareTwo = this.squareNames[indexTwo];
+                                if(this.legal_move(squareOne, squareTwo)){
+                                    moves.push([squareOne, squareTwo]);
+                                }
+                            }
+                        }
+                        return moves;
+                    }
+
+                    getStateStr(){
+                        var fen = "";
+                        for(var index = 0; index < this.squareNames.length; index++){
+                            if(this.squareToIndex(this.squareNames[index]) == null){
+                                fen += ".";
+                            }
+                            else{
+                                fen += this.matrix[this.squareToIndex(this.squareNames[index])].name;
+                            }
+                        }
+                        return fen;
+                    }
+
+                    loadState(state){
+                        // Creating square list
+                        this.squares = [];
+                        this.letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+                        for(var i = 1; i < 9; i++){
+                            for(var index = 0; index < 8; index++){
+                                var letter = this.letters[index];
+                                this.squares.push(new Piece("", (letter + (i).toString()), [0, 0]));
+                            }
+                        }
+
+                        // Board matrix
+                        this.pieces = [
+
+                        ]
+
+                        for(var index = 0; index < state.length; index++){
+                            this.pieces.push(state[index]);
+                        }
+
+                        for(var index = 0; index < this.pieces.length; index++){
+                            var pieceType = this.pieces[index];
+                            switch(pieceType.toUpperCase()){
+                                case "P":
+                                    this.squares[index] = new Pawn(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "R":
+                                    this.squares[index] = new Rook(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "B":
+                                    this.squares[index] = new Bishop(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "N":
+                                    this.squares[index] = new Knight(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "K":
+                                    this.squares[index] = new King(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                                case "Q":
+                                    this.squares[index] = new Queen(pieceType, this.squares[index].square, this.squares[index].position);
+                                    break;
+                            }
+                        }
+
+
+                        // Creating board dictionary
+                        this.matrix = []
+                        for(var index = 0; index < this.squares.length; index++){
+                            this.squares[index].update(this.squareToPosition(this.squares[index].square));
+                            if(this.squares[index].name != ""){
+                                this.matrix.push(this.squares[index]);
+                            }
+                        }
+                    }
+
+                    whiteInCheck(){
+                        var moves = this.pseudoBlackLegalMoves(false);
+
+                        for(var index = 0; index < moves.length; index++){
+                            var move = moves[index];
+                            if(this.pieceAt(move[1]) == "K"){
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    blackInCheck(){
+                        var moves = this.pseudoWhiteLegalMoves(false);
+
+                        for(var index = 0; index < moves.length; index++){
+                            var move = moves[index];
+                            if(this.pieceAt(move[1]) == "k"){
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+
+                    pseudoWhiteLegalMoves(check = true){
+                        var moves = []
+
+                        for(var indexOne = 0; indexOne < this.matrix.length; indexOne ++){
+                            for(var indexTwo = 0; indexTwo < this.squareNames.length; indexTwo ++){
+                                var squareOne = this.matrix[indexOne].square;
+                                var squareTwo = this.squareNames[indexTwo];
+                                if(this.isWhite(this.pieceAt(squareOne))){
+                                    if(this.legal_move_turnless(squareOne, squareTwo, check)){
+                                        moves.push([squareOne, squareTwo]);
+                                    }
+                                }
+                            }
+                        }
+                        return moves;
+                    }
+
+                    pseudoBlackLegalMoves(check = true){
+                        var moves = []
+
+                        for(var indexOne = 0; indexOne < this.matrix.length; indexOne ++){
+                            for(var indexTwo = 0; indexTwo < this.squareNames.length; indexTwo ++){
+                                var squareOne = this.matrix[indexOne].square;
+                                var squareTwo = this.squareNames[indexTwo];
+                                if(this.isBlack(this.pieceAt(squareOne))){
+                                    if(this.legal_move_turnless(squareOne, squareTwo, check)){
+                                        moves.push([squareOne, squareTwo]);
+                                    }
+                                }
+                            }
+                        }
+                        return moves;
+                    }
+
+                    rotateMove(){
+                        this.whiteMove = !this.whiteMove;
+                        this.blackMove = !this.blackMove;
+                    }
+
+                    is_checkmate(){
+                        return this.legal_moves().length == 0;
+                    }
+
+                    // Legal move validator without taking turns into account
+                    legal_move_turnless(squareOne, squareTwo, check = true){
+                        var pieceTo = this.pieceAt(squareTwo);
+                        var pieceFrom = this.pieceAt(squareOne);
+                        var allSquares = iterate(squareOne, squareTwo);
+                        var override = false;
+                        var legalStat = true;
+
+                        if(pieceFrom === "K" && this.whiteCastlingRights){
+                            var options = [["E1", "G1"], ["E1", "C1"]];
+                            var inOptions = [];
+                            var canCastle = true;
+                            for(var index = 0; index < options.length; index++){
+                                if(squareOne === options[index][0] && squareTwo === options[index][1]){
+                                    switch(index){
+                                        case 0:
+                                            if(this.pieceAt("H1") === "R"){
+                                                inOptions = [true, index];
+                                            }
+                                            break;
+                                        case 1:
+                                            if(this.pieceAt("A1") === "R"){
+                                                inOptions = [true, index];
+                                            }
+                                            break;
+                                    }
+                                }
+                            }
+                            if(inOptions[0]){
+                                var itemsInbetween = [["F1", "G1"], ["D1", "C1", "B1"]];
+                                var between = itemsInbetween[inOptions[1]];
+                                for(var index = 0; index < between.length; index++){
+                                    if(this.pieceAt(between[index]) != ""){
+                                        canCastle = false;
+                                    }
+                                }
+                                if(canCastle){
+                                    override = true;
+                                }
+                                legalStat = canCastle;
+                            }
+
+                        }
+
+                        if(pieceFrom === "k" && this.blackCastlingRights){
+                            var options = [["E8", "G8"], ["E8", "C8"]];
+                            var inOptions = [];
+                            var canCastle = true;
+                            for(var index = 0; index < options.length; index++){
+                                if(squareOne === options[index][0] && squareTwo === options[index][1]){
+                                    switch(index){
+                                        case 0:
+                                            if(this.pieceAt("H8") === "r"){
+                                                inOptions = [true, index];
+                                            }
+                                            break;
+                                        case 1:
+                                            if(this.pieceAt("A8") === "r"){
+                                                inOptions = [true, index];
+                                            }
+                                            break;
+                                    }
+                                }
+                            }
+                            if(inOptions[0]){
+                                var itemsInbetween = [["F8", "G8"], ["D8", "C8", "B8"]];
+                                var between = itemsInbetween[inOptions[1]];
+                                for(var index = 0; index < between.length; index++){
+                                    if(this.pieceAt(between[index]) != ""){
+                                        canCastle = false;
+                                    }
+                                }
+                                if(canCastle){
+                                    override = true;
+                                }
+                                legalStat = canCastle;
+                            }
+                        }
+
+                        if(this.sameTeam(pieceFrom, pieceTo)){
+                            return false;
+                        }
+                        if(squareOne == squareTwo){
+                            return false;
+                        }
+                        if(pieceFrom == ""){
+                            return false;
+                        }
+
+                        if(!override){
+                            switch(pieceFrom.toUpperCase()){
+                                // Rook
+                                case "R":
+                                    if(!isHorizontal(squareOne, squareTwo)){
+                                        return false;
+                                    }
+                                    for(var index = 0; index < allSquares.length; index ++){
+                                        var currSquare = allSquares[index];
+                                        if(this.pieceAt(currSquare) != ""){
+                                            return false;
+                                        }
+                                    }
+
+                                    break;
+
+                                // Bishop
+                                case "B":
+                                    if(!isDiagonal(squareOne, squareTwo)){
+                                        return false;
+                                    }
+                                    for(var index = 0; index < allSquares.length; index ++){
+                                        var currSquare = allSquares[index];
+                                        if(this.pieceAt(currSquare) != ""){
+                                            return false;
+                                        }
+                                    }
+
+                                    break;
+
+                                // Knight
+                                case "N":
+                                    if(!isKnightMove(squareOne, squareTwo)){
+                                        return false;
+                                    }
+                                    break;
+
+                                // Queen
+                                case "Q":
+                                    if(!isDiagonal(squareOne, squareTwo) && !isHorizontal(squareOne, squareTwo)){
+                                        return false;
+                                    }
+
+                                    for(var index = 0; index < allSquares.length; index ++){
+                                        var currSquare = allSquares[index];
+                                        if(this.pieceAt(currSquare) != ""){
+                                            return false;
+                                        }
+                                    }
+
+                                    break;
+
+                                // Pawn
+                                case "P":
+                                    var whiteDiag = (this.isWhite(pieceFrom) && (equals(squareTwo, add(squareOne, 1, 1)) || equals(squareTwo, add(squareOne, -1, 1)))) && (!this.sameTeam(this.pieceAt(squareTwo), pieceFrom)) && this.pieceAt(squareTwo) != "";
+                                    var blackDiag = (this.isBlack(pieceFrom) && (equals(squareTwo, add(squareOne, 1, -1)) || equals(squareTwo, add(squareOne, -1, -1)))) && (!this.sameTeam(this.pieceAt(squareTwo), pieceFrom)) && this.pieceAt(squareTwo) != "";
+                                    var diag = whiteDiag || blackDiag;
+                                    var whiteOneAhead = (this.isWhite(pieceFrom) && equals(squareTwo, add(squareOne, 0, 1))) && this.pieceAt(squareTwo) == "";
+                                    var blackOneAhead = (this.isBlack(pieceFrom) && equals(squareTwo, add(squareOne, 0, -1))) && this.pieceAt(squareTwo) == "";
+                                    var oneAhead = whiteOneAhead || blackOneAhead;
+                                    var whiteTwoAhead = (this.isWhite(pieceFrom) && equals(squareTwo, add(squareOne, 0, 2))) && squareOne.substring(1, 2) == "2" && this.pieceAt(squareTwo) == "";
+                                    var blackTwoAhead = (this.isBlack(pieceFrom) && equals(squareTwo, add(squareOne, 0, -2))) && squareOne.substring(1, 2) == "7" && this.pieceAt(squareTwo) == "";
+                                    var twoAhead = whiteTwoAhead || blackTwoAhead;
+
+                                    legalStat = diag || oneAhead || twoAhead;
+
+                                    break;
+
+                                // King
+                                case "K":
+                                    var letterDist = Math.abs(letters.indexOf(squareOne.substring(0, 1)) - letters.indexOf(squareTwo.substring(0, 1)));
+                                    var numberDist = Math.abs(parseInt(squareOne.substring(1, 2)) - parseInt(squareTwo.substring(1, 2)));
+                                    legalStat = letterDist + numberDist == 1 || (letterDist == numberDist && numberDist == 1);
+                                    break;
+                            }
+                        }
+
+                        if(check && legalStat){
+                            var afterWhite;
+                            var afterBlack;
+
+                            var pieceRemoved = 1;
+                            var pieceTwoIndex = this.squareToIndex(squareTwo);
+                            if(this.pieceAt(squareTwo) != ""){
+                                pieceRemoved = this.matrix[pieceTwoIndex];
+                                board.matrix.splice(pieceTwoIndex, 1)
+                            }
+                            var item = this.matrix[this.squareToIndex(squareOne)];
+                            item.setSquare(squareTwo);
+
+                            afterWhite = this.whiteInCheck();
+                            afterBlack = this.blackInCheck();
+
+                            if(pieceRemoved != 1){
+                                this.matrix.push(pieceRemoved);
+                            }
+
+                            item.setSquare(squareOne);
+                            if(this.whiteMove){
+                                if(afterWhite){
+                                    return false;
+                                }
+                            }
+                            if(this.blackMove){
+                                if(afterBlack){
+                                    return false;
+                                }
+                            }
+                        }
+                        return legalStat;
+                    }
+
+                    // legal move generator taking moves into account
+                    legal_move(squareOne, squareTwo){
+                        var pieceFrom = this.pieceAt(squareOne);
+                        if(this.isWhite(pieceFrom) && this.blackMove){
+                            return false;
+                        }
+                        if(this.isBlack(pieceFrom) && this.whiteMove){
+                            return false;
+                        }
+                        return this.legal_move_turnless(squareOne, squareTwo);
+                    }
+
+                    push_uci(squareOne, squareTwo){
+                        var item = this.matrix[this.squareToIndex(squareOne)];
+                        if(this.pieceAt(squareTwo) != ""){
+                            this.matrix.splice(this.squareToIndex(squareTwo), 1)
+                        }
+                        item.setSquare(squareTwo);
+                        item.update(board.squareToPosition(squareTwo));
+
+                        if(item.name === "P" && item.square.substring(1) === "8"){
+                            var index = this.squareToIndex(squareTwo);
+                            this.matrix[index] = (new Queen("Q", item.square, item.position));
+                        }
+
+                        if(item.name === "p" && item.square.substring(1) === "1"){
+                            var index = this.squareToIndex(squareTwo);
+                            this.matrix[index] = (new Queen("q", item.square, item.position));
+                        }
+
+                        
+
+                        // White castling
+                        if(item.name === "K"){
+                            var whiteCastlingOptions = [["E1", "G1"], ["E1", "C1"]];
+                            for(var index = 0; index < whiteCastlingOptions.length; index++){
+                                if(squareOne === whiteCastlingOptions[index][0] && squareTwo === whiteCastlingOptions[index][1]){
+                                    switch(index){
+                                        case 0:
+                                            var rook = this.matrix[this.squareToIndex("H1")];
+                                            rook.setSquare("F1");
+                                            rook.update(this.squareToPosition("F1"));
+                                            break;
+                                        case 1:
+                                            var rook = this.matrix[this.squareToIndex("A1")];
+                                            rook.setSquare("D1");
+                                            rook.update(this.squareToPosition("D1"));
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Black castling
+                        
+                        if(item.name === "k"){
+                            var blackCastlingOptions = [["E8", "G8"], ["E8", "C8"]];
+                            for(var index = 0; index < blackCastlingOptions.length; index++){
+                                if(squareOne === blackCastlingOptions[index][0] && squareTwo === blackCastlingOptions[index][1]){
+                                    switch(index){
+                                        case 0:
+                                            var rook = this.matrix[this.squareToIndex("H8")];
+                                            rook.setSquare("F8");
+                                            rook.update(this.squareToPosition("F8"));
+                                            break;
+                                        case 1:
+                                            var rook = this.matrix[this.squareToIndex("A8")];
+                                            rook.setSquare("D8");
+                                            rook.update(this.squareToPosition("D8"));
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if(item.name === "K"){
+                            this.whiteCastlingRights = false;
+                        }
+                        if(item.name === "k"){
+                            this.blackCastlingRights = false;
+                        }
+
+                        this.rotateMove();
+                    }
+                }
+
+            </script>
+            <script type="text/javascript">
+                var board;
+                
+                var dragged = false;
+                var illegal = false;
+
+                var findingEnding = false;
+                var pieceDragged = null;
+                var starting = []
+                var ending = []
+                var aiDelay = 0;
+
+                var nick = "Stranger";
+                var oppenentNick = "Stranger";
+
+                var myColor = "White";
+                var messages = 0;
+
+                function addMessage(msg, color="white"){
+                    maxMessages = 6;
+                    var item = '<tr><th><p id="chatFont" style=\"color:' + color + '\">' + msg + '</p></th></tr>';
+                    document.getElementById("msgBox").innerHTML += item;
+                    messages++;
+
+                    if(messages >= maxMessages){
+                        var first = document.getElementById("msgBox").innerHTML.split("</tr>")[0] + "</tr>";
+                        document.getElementById("msgBox").innerHTML = document.getElementById("msgBox").innerHTML.replace(first, "");
+                    }
+                }
+
+                var socket = io();
+
+                socket.on('set color', (newColor) => {
+                    myColor = newColor;
+                    addMessage("PlumBot: You are on " + newColor + ". Use \"/nick {NAME}\" to set your name.", "aqua");
+                });
+
+                socket.on('make move', (move) => {
+                    board.push_uci(move.substring(0, 2), move.substring(2));
+                });
+
+                socket.on('reset', (value) => {
+                    board = new Board();
+                    for(var index = 0; index < board.matrix.length; index++){
+                        var item = board.matrix[index];
+                        item.update([item.getX()+80/2, item.getY()+80/2])
+                    }
+                });
+
+                socket.on('other player join', (data) => {
+                    addMessage("PlumBot: Stranger has joined.", "aqua");
+                })
+
+                socket.on('other player left', (data) => {
+                    addMessage("PlumBot: " + oppenentNick + " has left.", "aqua");
+                })
+
+                socket.on('error', (data) => {
+                    addMessage("PlumBot: You are here illegally. Game already in progress.", "aqua");
+                    illegal = true;
+                });
+
+                socket.on('debug', (data) => {
+                    console.log("Debug: " + data);
+                });
+                
+                socket.on('set gamestate', (newState) => {
+                    board.loadState(newState);
+                });
+
+                socket.on('got message', (msg) => {
+                    if(!msg.includes("[NICK]")){
+                        addMessage(msg);
+                    }
+                    else{
+                        addMessage("PlumBot: " + oppenentNick + " is now nicked as " + msg.replace("[NICK]", ""), "aqua");
+                        oppenentNick = msg.replace("[NICK]", "");
+                    }
+                });
+                function sendGameState(username, password){
+                    var data = {
+                        loginInfo : username + ":" + password,
+                        gamestate : board.getStateStr()
+                    }
+                    socket.emit('gamestate plea', data);
+                }
+
+                function resetGameState(username, password){
+                    socket.emit('reset plea', username + ":" + password);
+                }
+
+                function sendMove(move){
+                    socket.emit("send move", move);
+                }
+
+                function setup(){
+                    var canvas = createCanvas(800*.8, 800*.8);
+                    canvas.position(80, 80);
+
+                    board = new Board();
+                    for(var index = 0; index < board.matrix.length; index++){
+                        var item = board.matrix[index];
+                        item.update([item.getX()+80/2, item.getY()+80/2])
+                    };
+                }
+
+                function draw(){
+                    try{
+                        if(!illegal){
+                            background(80);
+                            createGrid();
+
+                            aiDelay --;
+
+                            if(isMousePressed){
+                                onDrag();
+                            }
+
+                            updatePieces();
+                            for(var index = 0; index < board.matrix.length; index++){
+                                var item = board.matrix[index];
+                                item.show();
+                            }
+
+                            if(!dragged){
+                                if(!pieceBeingDragged()){
+                                    if(findingEnding ){
+                                        ending = [roundToMatrix(mouseX, mouseY)[0], roundToMatrix(mouseX, mouseY)[1]];
+                                        var startingSquare = board.positionToSquare(starting[0], starting[1]);
+                                        var endingSquare = board.positionToSquare(ending[0], ending[1]);
+
+                                        if(pieceDragged.square == endingSquare){
+                                            findingEnding = false;
+                                            return;
+                                        }
+
+                                        // Move is here
+
+                                        var legal = board.legal_move(startingSquare, endingSquare);
+                                        var compareTo = myColor == "White" ? "P" : "p";
+
+                                        if(legal && board.sameTeam(compareTo, pieceDragged.name)){
+                                            if(board.sameTeam(board.pieceAt(endingSquare), pieceDragged.name)){
+                                                findingEnding = false;
+                                                return;
+                                            }
+                                            board.push_uci(startingSquare, endingSquare);
+
+                                            aiDelay = 1;
+
+                                            sendMove(startingSquare + endingSquare);
+                                        
+                                        }
+                                        else{
+                                            pieceDragged.setSquare(startingSquare);
+                                            pieceDragged.update(board.squareToPosition(startingSquare));
+                                        }
+
+                                        findingEnding = false;
+
+                                    }
+                                    centerPieces();
+
+                                }
+                                for(var index = 0; index < board.matrix.length; index++){
+                                    var item = board.matrix[index];
+                                    item.setDragged(false);
+                                }
+                            }
+                            else{
+                                if(!findingEnding){
+
+                                    starting = [roundToMatrix(mouseX, mouseY)[0], roundToMatrix(mouseX, mouseY)[1]];
+                                    findingEnding = true;
+                                }
+                            }
+                            dragged = false;
+
+                            // Ai goes here.
+
+                            if(board.blackMove && aiDelay < 0){
+
+                            }
+                        }
+
+                        else{
+                            background(255);
+                            document.getElementById("team").innerHTML = "You are illegally here, game in progress.";
+                        }
+                    }
+                    catch(err){
+
+                    }
+                }
+
+                function roundToMatrix(x, y){
+                    var nx;
+                    var ny;
+                    for(var x = 0; x < width; x += 80){
+                        for(var y = 0; y < height; y += 80){
+                            if(mouseX >= x && mouseX <= x + 80 && mouseY >= y && mouseY <= y + 80){
+                                nx = x;
+                                ny = y;
+                            }
+                        }
+                    }
+                    return [nx, ny];
+                }
+
+                function pieceBeingDragged(){
+                    var bool = false;
+                    for(var index = 0; index < board.matrix.length; index++){
+                        var item = board.matrix[index];
+                        if(item.isBeingDragged()){
+                            bool = true;
+                        }
+                    }
+                    return bool;
+                }
+
+                function updatePieces(){
+                    try{
+                        for(var index = 0; index < board.matrix.length; index++){
+                            var item = board.matrix[index];
+                            if(!item.isBeingDragged()){
+                                item.update([board.squareToPosition(item.square)[0]+80/2, board.squareToPosition(item.square)[1]+80/2]);
+                            }
+                        }
+                    }
+                    catch(err){
+                        
+                    }
+                }
+
+                function centerPieces(){
+                    for(var index = 0; index < board.matrix.length; index++){
+                        var item = board.matrix[index];
+                        var newX = roundToMatrix(item.getX(), item.getY())[0];
+                        var newY = roundToMatrix(item.getX(), item.getY())[1];
+                        item.update([newX+80/2, newY+80/2]);
+                    }
+                }
+
+                function createGrid(){
+                    for(var x = 0; x < 800; x += 80*2){
+                        for(var y = 0; y < 800; y += 80*2){
+                            fill(255);
+                            rect(x, y, 80, 80);
+                            rect(x+80, y+80, 80, 80)
+                        }
+                    }
+                }
+
+                function onDrag(){
+                    var squarePosition = []
+                    for(var x = 0; x < 800; x += 80){
+                        for(var y = 0; y < 800; y += 80){
+                            if(mouseX >= x && mouseX <= x+80 && mouseY >= y && mouseY <= y+80){
+                                squarePosition = [x, y]
+                            }
+                        }
+                    }
+                    try{
+                        var square;
+                        if(!pieceBeingDragged()){
+                            square = board.pieceObjectAt(board.positionToSquare(squarePosition[0], squarePosition[1]));
+                        }
+                        else{
+                            for(var index = 0; index < board.matrix.length; index++){
+                                var item = board.matrix[index];
+                                if(item.isBeingDragged()){
+                                    square = item;
+                                    break;
+                                }
+                            }
+                        }
+                        var canBeDragged = square.isBeingDragged() || !dragged;
+                        if(canBeDragged){
+                            if(mouseX < width && mouseY < height){
+                                pieceDragged = square;
+                                square.update([mouseX, mouseY]);
+                                square.setDragged(true);
+                            }
+                        }
+                        dragged = true;
+                    }
+                    catch(err){
+                    }
+                }
+
+        </script>
+
+        <script>
+            function sendMessage(){
+                var text = document.getElementsByName("msg")[0].value;
+                if(!text.includes("/nick ")){
+                    socket.emit('chat message', nick + ": " + text);
+                    addMessage("You: " + document.getElementsByName("msg")[0].value);
+                }
+
+                else{
+                    nick = text.replace("/nick ", "");
+                    addMessage("PlumBot: You are now nicked as " + nick, "aqua");
+                    socket.emit("chat message", "[NICK]" + nick);
+                }
+
+                document.getElementsByName("msg")[0].value = "";
+            }
+        </script>
+        <button onclick="sendMessage()" id="msg-button" type="submit"><p id="txtFont">Send</p></button>
+    </div>
+
+  </body>
+</html>
